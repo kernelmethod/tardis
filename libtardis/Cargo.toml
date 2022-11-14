@@ -1,0 +1,11 @@
+[package]
+name = "libtardis"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+deku.workspace = true
+derive-try-from-primitive = "0.1.0"
+lz4_flex.workspace = true

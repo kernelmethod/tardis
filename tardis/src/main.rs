@@ -25,7 +25,7 @@ fn pack(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>> {
 
     let loader = include_bytes!(concat!(
         env!("OUT_DIR"),
-        "/embeds/x86_64-unknown-linux-musl/release/loader"
+        "/embeds/x86_64-unknown-linux-gnu/release/loader"
     ));
     output.write_all(loader)?;
 

@@ -9,3 +9,4 @@ edition = "2021"
 deku.workspace = true
 derive-try-from-primitive = "0.1.0"
 lz4_flex.workspace = true
+ring = "0.16.20"

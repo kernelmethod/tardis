@@ -1,8 +1,13 @@
 //! Types and methods for serializing the compressed executable and writing
 //! it out as a new binary.
 
+use crate::crypto;
 use deku::prelude::*;
 use lz4_flex::block::DecompressError;
+use ring::{
+    aead::{self, BoundKey, UnboundKey, CHACHA20_POLY1305},
+    rand,
+};
 
 /// End marker for Tardis's manifest.
 ///
@@ -42,6 +47,9 @@ pub struct TardisResource {
     #[deku(update = "self.data.len()")]
     length: usize,
 
+    /// The encryption key for the resource
+    key: [u8; 32],
+
     /// The data contained in the resource.
     #[deku(count = "length")]
     pub data: Vec<u8>,
@@ -50,16 +58,43 @@ pub struct TardisResource {
 impl TardisResource {
     /// Compress a block of data and store it in a [`TardisResource`] instance.
     pub fn compress(data: &[u8]) -> Self {
-        let compressed_data = lz4_flex::compress_prepend_size(data);
+        let rng = rand::SystemRandom::new();
+        let key = rand::generate::<[u8; 32]>(&rng).unwrap().expose();
+
+        // Compress and encrypt data
+        let mut data = lz4_flex::compress_prepend_size(data);
+        let uk = UnboundKey::new(&CHACHA20_POLY1305, &key).unwrap();
+        let nonces = crypto::NonceSeq::new(1);
+        let mut sk = aead::SealingKey::new(uk, nonces);
+
+        let aad = aead::Aad::from(b"");
+        sk.seal_in_place_append_tag(aad, &mut data).unwrap();
+        let len = data.len();
+
         TardisResource {
-            length: compressed_data.len(),
-            data: compressed_data,
+            key,
+            data,
+            length: len,
         }
     }
 
     /// Decompress the data block and return it.
-    pub fn decompress(&self) -> Result<Vec<u8>, DecompressError> {
-        lz4_flex::decompress_size_prepended(&self.data)
+    pub fn decompress(self) -> Result<Vec<u8>, DecompressError> {
+        let uk = match UnboundKey::new(&CHACHA20_POLY1305, &self.key) {
+            Ok(key) => key,
+            Err(_) => panic!(),
+        };
+        let nonces = crypto::NonceSeq::new(1);
+        let mut ok = aead::OpeningKey::new(uk, nonces);
+        let aad = aead::Aad::from(b"");
+
+        let mut data = self.data;
+
+        let plaintext = match ok.open_in_place(aad, &mut data) {
+            Ok(data) => data,
+            Err(_) => panic!(),
+        };
+        lz4_flex::decompress_size_prepended(&plaintext)
     }
 
     /// Return the length of the [`TardisResource`] after it's converted to a byte

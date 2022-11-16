@@ -108,7 +108,7 @@ impl TardisResource {
 #[cfg(test)]
 mod test {
     use super::{EndMarker, TardisResource};
-    use deku::DekuContainerWrite;
+    use deku::prelude::*;
 
     #[test]
     fn test_end_marker_nbytes() {
@@ -121,9 +121,42 @@ mod test {
     }
 
     #[test]
+    fn test_compress_and_decompress() {
+        let original = b"hello, world!";
+
+        let resource = TardisResource::compress(original);
+        let result = resource.decompress();
+        assert!(result.is_ok());
+
+        let decompressed = result.unwrap();
+        assert_eq!(decompressed, original);
+    }
+
+    #[test]
     fn test_tardis_resource_len() {
         let resource = TardisResource::compress(b"\x00\x00\x00\x00");
         let resource_bytes = resource.to_bytes().unwrap();
         assert_eq!(resource_bytes.len(), resource.len());
+    }
+
+    #[test]
+    fn test_serialize_and_deserialize() {
+        let original = b"hello, world!";
+
+        // Serialize to bytes
+        let resource = TardisResource::compress(original);
+        let result = resource.to_bytes();
+        assert!(result.is_ok());
+        let resource_bytes = result.unwrap();
+
+        // Deserialize from bytes
+        let result = TardisResource::from_bytes((&resource_bytes, 0));
+        assert!(result.is_ok());
+        let (_, resource) = result.unwrap();
+        let result = resource.decompress();
+        assert!(result.is_ok());
+        let decompressed = result.unwrap();
+
+        assert_eq!(original.to_vec(), decompressed);
     }
 }

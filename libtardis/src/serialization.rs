@@ -69,13 +69,9 @@ impl TardisResource {
 
         let aad = aead::Aad::from(b"");
         sk.seal_in_place_append_tag(aad, &mut data).unwrap();
-        let len = data.len();
+        let length = data.len();
 
-        TardisResource {
-            key,
-            data,
-            length: len,
-        }
+        TardisResource { key, data, length }
     }
 
     /// Decompress the data block and return it.
@@ -94,13 +90,13 @@ impl TardisResource {
             Ok(data) => data,
             Err(_) => panic!(),
         };
-        lz4_flex::decompress_size_prepended(&plaintext)
+        lz4_flex::decompress_size_prepended(plaintext)
     }
 
     /// Return the length of the [`TardisResource`] after it's converted to a byte
     /// string.
     pub fn len(&self) -> usize {
-        8 + self.data.len()
+        8 + 32 + self.data.len()
     }
 
     /// Returns `true` if there isn't any data stored in the [`TardisResources`].

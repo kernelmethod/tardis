@@ -1,0 +1,17 @@
+version: "3"
+services:
+  build:
+    image: tardis-build:latest
+    build:
+      context: .
+    volumes:
+      - ../:/home/build/workspace:ro
+      - cargo:/home/build/cargo
+      - target:/home/build/target
+    command:
+      - cargo
+      - test
+
+volumes:
+  cargo:
+  target:

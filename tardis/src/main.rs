@@ -1,6 +1,6 @@
 //! Main executable for running the Tardis packer.
 
-use clap::{app_from_crate, arg, App, AppSettings};
+use clap::{app_from_crate, arg, AppSettings};
 use deku::DekuContainerWrite;
 use libtardis::serialization::{EndMarker, TardisResource};
 use std::error::Error;
@@ -68,19 +68,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     let app = app_from_crate!()
         .about("Tardis executable packer for Linux")
         .setting(AppSettings::ArgRequiredElseHelp)
-        .subcommand(
-            App::new("pack")
-                .arg(arg!([INPUT_FILE]).required(true))
-                .arg(arg!([OUTPUT_FILE]).required(true)),
-        );
+        .arg(arg!([INPUT_FILE]).required(true))
+        .arg(arg!([OUTPUT_FILE]).required(true));
 
-    let matches = app.get_matches();
-
-    if let Some(m) = matches.subcommand_matches("pack") {
-        let input_file = m.value_of("INPUT_FILE").unwrap();
-        let output_file = m.value_of("OUTPUT_FILE").unwrap();
-        pack(input_file, output_file)?;
-    }
+    let m = app.get_matches();
+    let input_file = m.value_of("INPUT_FILE").unwrap();
+    let output_file = m.value_of("OUTPUT_FILE").unwrap();
+    pack(input_file, output_file)?;
 
     Ok(())
 }

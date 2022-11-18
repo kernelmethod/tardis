@@ -18,16 +18,17 @@ fn add_guest(f: &mut File, guest: &[u8]) -> Result<usize, Box<dyn Error>> {
     Ok(resource_bytes.len())
 }
 
+const LOADER: &[u8] = include_bytes!(concat!(
+    env!("OUT_DIR"),
+    "/embeds/x86_64-unknown-linux-gnu/release/loader"
+));
+
 fn pack(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>> {
     // Write the loader to the output file
     let mut guests_size = 0;
     let mut output = File::create(output_file)?;
 
-    let loader = include_bytes!(concat!(
-        env!("OUT_DIR"),
-        "/embeds/x86_64-unknown-linux-gnu/release/loader"
-    ));
-    output.write_all(loader)?;
+    output.write_all(LOADER)?;
 
     // Set the same permissions on the output file that existed on the
     // input file
@@ -47,13 +48,13 @@ fn pack(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>> {
 
     // Write the EndMarker to the output file
     let marker = EndMarker {
-        manifest_start: loader.len(),
+        manifest_start: LOADER.len(),
         n_resources: 1,
     };
     let marker_bytes = marker.to_bytes()?;
     output.write_all(&marker_bytes)?;
 
-    let output_size = loader.len() + guests_size;
+    let output_size = LOADER.len() + guests_size;
     println!(
         "Wrote {} ({:.2}% of input)",
         output_file,

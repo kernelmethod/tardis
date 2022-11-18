@@ -3,15 +3,9 @@
 //! This program is in charge of reading the compressed binary from
 //! the manifest, decompressing it in memory, and then running it.
 
-// extern crate panic_abort;
-
 use deku::DekuContainerRead;
 use libtardis::serialization::{EndMarker, TardisResource};
-use nix::{
-    fcntl::AtFlags,
-    sys::memfd::{memfd_create, MemFdCreateFlag},
-    unistd::execveat,
-};
+use libtardis::syscall as sysc;
 use std::{
     env,
     error::Error,
@@ -31,11 +25,8 @@ fn spawn_guest(res: TardisResource) -> Result<(), Box<dyn Error>> {
         Ok(fd) => fd,
         Err(_) => panic!("aborted"),
     };
-    let flags = MemFdCreateFlag::MFD_CLOEXEC;
-    let fd = match memfd_create(name, flags) {
-        Ok(fd) => fd,
-        Err(_) => panic!("aborted"),
-    };
+    let flags = 0x1;
+    let fd = unsafe { sysc::memfd_create(name, flags) };
 
     // Write the guest binary to the in-memory file
     let mut f = unsafe { File::from_raw_fd(fd) };
@@ -45,16 +36,16 @@ fn spawn_guest(res: TardisResource) -> Result<(), Box<dyn Error>> {
     let argv: Vec<CString> = env::args().filter_map(|x| CString::new(x).ok()).collect();
 
     let envp: Vec<CString> = env::vars()
-        .map(|(k, v)| format!("{}={}\0", k, v))
+        .map(|(k, v)| format!("{k}={v}\0"))
         .filter_map(|x| CString::new(x).ok())
         .collect();
 
     let path = CStr::from_bytes_with_nul(b"\0")?;
-    let flags = AtFlags::AT_EMPTY_PATH;
+    let flags = 0x1000;
 
-    execveat(fd, path, &argv, &envp, flags)?;
-
-    Ok(())
+    unsafe {
+        sysc::execveat(fd, path, &argv, &envp, flags);
+    };
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -62,19 +53,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let marker_start = host.len() - EndMarker::nbytes();
 
     let (_, marker) = EndMarker::from_bytes((&host[marker_start..], 0))?;
+    let offset = marker.manifest_start;
 
-    let mut offset = marker.manifest_start;
-
-    for _ in 0..marker.n_resources {
-        // Read the next resource and fork a new process off
-        // of it
-        let (_, resource) = TardisResource::from_bytes((&host[offset..], 0))?;
-        let resource_len = resource.len();
-        spawn_guest(resource)?;
-
-        // Update the offset into the manifest
-        offset += resource_len;
-    }
+    // Read the next resource and fork a new process off
+    // of it
+    let (_, resource) = TardisResource::from_bytes((&host[offset..], 0))?;
+    spawn_guest(resource)?;
 
     Ok(())
 }

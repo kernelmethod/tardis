@@ -1,0 +1,16 @@
+# MITRE ATT&CK T1620 (Reflective Code Loading): https://attack.mitre.org/techniques/T1620/
+
+# The following auditd rules will report calls to the memfd_create syscall,
+# which creates a file handle to a memory address. In general this is a rather
+# unusual syscall to see on a production system and may be indicative of an
+# attempt to execute malicious code from memory, but YMMV.
+
+-a always,exit -F arch=b32 -S memfd_create -k T1620_Reflective_Code_Loading
+-a always,exit -F arch=b64 -S memfd_create -k T1620_Reflective_Code_Loading
+
+# I've commented out these rules by default, but if you find that they don't
+# generate too much noise, you may wish to include them alongside the ones
+# above.
+
+# -a always,exit -F arch=b32 -S execveat -k T1620_Reflective_Code_Loading
+# -a always,exit -F arch=b64 -S execveat -k T1620_Reflective_Code_Loading

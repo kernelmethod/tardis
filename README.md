@@ -39,12 +39,3 @@ syscalls in order to run. As such, it won't run for Linux versions before 3.19.
 
 **TODO**
 
-## Detections
-
-**TODO**:
-
-- auditd rules
-- YARA rules (?)
-- seccomp profiles (?)
-
-

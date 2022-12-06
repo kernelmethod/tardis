@@ -1,0 +1,7 @@
+#!/usr/bin/env -S bpftrace -f json
+
+tracepoint:syscalls:sys_enter_memfd_create,
+tracepoint:syscalls:sys_enter_execveat
+{
+    printf("probe=%s pid=%d comm=%s", probe, pid, comm);
+}

@@ -8,13 +8,13 @@ implement these mitigations.
 ## auditd rules
 
 You can find auditd rules for detecting tardis-packed executables in
-[audit.rules](mitigations/audit.rules).
+[audit.rules](audit.rules).
 
 ## bpftrace script
 
 I've added a short [bpftrace](https://github.com/iovisor/bpftrace) script,
-[tardis.bt](mitigations/tardis.bt), that can be used to detect the relevant
-syscalls for the method used by this code.
+[tardis.bt](tardis.bt), that can be used to detect the relevant syscalls for
+the method used by this code.
 
 ## seccomp
 

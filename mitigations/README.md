@@ -25,9 +25,3 @@ For instance, if you're running in a Docker container, you can use a [seccomp
 profile](https://docs.docker.com/engine/security/seccomp/) with the
 `memfd_create` and `execveat` syscalls removed.
 
-## Additional resources
-
-- [tmp.0ut 1.9 by Netspooky](https://tmpout.sh/1/9.html) describes a variant on
-  this technique for loading a kernel module in-memory.
-  - Netspooky also has [this code example](https://github.com/netspooky/golfclub/blob/master/linux/dl_memfd_219.asm)
-    demonstrating calling `memfd_create` and `execve` from assembly.

@@ -37,5 +37,26 @@ syscalls in order to run. As such, it won't run for Linux versions before 3.19.
 
 ## Methodology
 
-**TODO**
+`tardis` compresses and encrypts a binary using LZ4 and ChaCha20-Poly1305,
+creating a new ELF file. At runtime, it decompresses and runs itself using the
+[`memfd_create`](https://man7.org/linux/man-pages/man2/memfd_create.2.html) and
+[`execveat`](https://man7.org/linux/man-pages/man2/execveat.2.html) syscalls.
+This method runs *entirely* from memory, without leaving any artefacts on disk.
+
+### Additional resources
+
+The `memfd_create` + `execveat` methodology is a relatively simple and fairly
+well-known technique in a family of methods known as *reflective code loading*.
+Here are some additional resources you can look at to learn more:
+
+- [MITRE ATT&CK T1620: Reflective Code
+  Loading](https://attack.mitre.org/techniques/T1620/)
+
+- [tmp.0ut 1.9 by Netspooky](https://tmpout.sh/1/9.html) describes a variant on
+  this technique for loading a kernel module in-memory.
+  - Netspooky also has [this code example](https://github.com/netspooky/golfclub/blob/master/linux/dl_memfd_219.asm)
+    demonstrating calling `memfd_create` and `execve` from assembly.
+
+- [Forum post on 0x00sec](https://0x00sec.org/t/super-stealthy-droppers/3715)
+  describing this technique.
 

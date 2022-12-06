@@ -1,4 +1,22 @@
-//! Main executable for running the Tardis packer.
+//! # Tardis executable packer
+//!
+//! Tardis is a proof-of-concept `memfd_create` and `execveat`-based [executable
+//! packer](https://en.wikipedia.org/wiki/Executable_compression) for Linux. It can decrypt and
+//! decompress a binary entirely in memory, without leaving any binary artefacts on-disk.
+//!
+//! ## Usage
+//!
+//! To compress an executable using the CLI, run `./tardis input_file output_file`. For instance,
+//! the following command packs `/usr/bin/ls` and writes it to the file `./packed_ls`.
+//!
+//! ```
+//! $ ./tardis /usr/bin/ls ./packed_ls
+//! Wrote ./ls (917.50% of input)
+//! ```
+//!
+//! > **Warning:** `tardis` is not especially effective as an all-around packer for smaller
+//! > binaries. The overhead incurred in adding the loader is typically much higher than the
+//! > savings from compression at the lower end.
 
 use clap::{app_from_crate, arg, AppSettings};
 use deku::DekuContainerWrite;
@@ -12,7 +30,7 @@ use std::io::Write;
 fn add_guest(f: &mut File, guest: &[u8]) -> Result<usize, Box<dyn Error>> {
     // Compress the guest binary and write it to the file
     let resource = TardisResource::compress(guest);
-    let resource_bytes = resource.to_bytes()?;
+    let resource_bytes = resource.to_bytes().unwrap();
     f.write_all(&resource_bytes)?;
 
     Ok(resource_bytes.len())
@@ -51,7 +69,7 @@ fn pack(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>> {
         manifest_start: LOADER.len(),
         n_resources: 1,
     };
-    let marker_bytes = marker.to_bytes()?;
+    let marker_bytes = marker.to_bytes().unwrap();
     output.write_all(&marker_bytes)?;
 
     let output_size = LOADER.len() + guests_size;

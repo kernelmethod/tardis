@@ -1,11 +1,13 @@
-# Tardis executable packer
+# Tardis: multi-executable packer
 
 `tardis` is a simple [executable packer](https://en.wikipedia.org/wiki/Executable_compression)
 I hacked together for [ISTS 2022](https://ists.io/). Its main goals are to be
 simple and easy to extend.
 
 Tardis can compress an arbitrary Linux ELF file and convert it into a new
-program, which then gets unpacked and executed from memory.
+program, which then gets unpacked and executed from memory. It can also compress
+multiple executables _into the same binary_. In this case, Tardis will fork off
+a new process for each binary that it unpacks.
 
 ## Compiling and running
 
@@ -20,6 +22,12 @@ To compress an executable, you can run
 
 ```
 $ cargo run -- -i $input_file -o $output_file
+```
+
+You can compress multiple executables so that they run concurrently:
+
+```
+$ cargo run -- -i $exe1 -i $exe2 -i $exe3 -o $output_file
 ```
 
 ## Important usage notes

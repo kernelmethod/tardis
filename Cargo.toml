@@ -9,7 +9,7 @@ resolver = "2"
 [workspace.dependencies]
 deku = "0.16.0"
 lz4_flex = { version = "0.11.2", default-features = false, features = ["safe-encode", "safe-decode"] }
-nix = { version = "0.27", features = ["process"] }
+nix = { version = "0.27", features = ["fs", "process"] }
 
 [profile.release]
 strip = "symbols"

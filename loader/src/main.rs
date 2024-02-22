@@ -5,32 +5,34 @@
 
 use deku::DekuContainerRead;
 use libtardis::serialization::{EndMarker, TardisResource};
-use libtardis::syscall as sysc;
-use nix::unistd::{fork, ForkResult};
+use nix::{
+    fcntl::AtFlags,
+    sys::memfd::{memfd_create, MemFdCreateFlag},
+    unistd::{execveat, fork, ForkResult},
+};
 use std::{
     env,
     error::Error,
     ffi::{CStr, CString},
     fs::{self, File},
     io::Write,
-    os::unix::io::FromRawFd,
+    os::{fd::AsRawFd, unix::io::FromRawFd},
 };
 
 fn spawn_guest(res: TardisResource) -> Result<(), Box<dyn Error>> {
     // Decompress the guest
     let guest = res.decompress().expect("invalid lz4 payload");
 
-    // Exec into the guest binary by creating an  in-memory file
-    // with memfd_create
+    // Create an in-memory file to store the guest binary
     let name = match CStr::from_bytes_with_nul(b"a\0") {
         Ok(fd) => fd,
         Err(_) => panic!("aborted"),
     };
-    let flags = 0x1; // MFD_CLOEXEC
-    let fd = unsafe { sysc::memfd_create(name, flags) };
+    let flags = MemFdCreateFlag::MFD_CLOEXEC;
+    let fd = memfd_create(name, flags)?;
 
     // Write the guest binary to the in-memory file
-    let mut f = unsafe { File::from_raw_fd(fd) };
+    let mut f = unsafe { File::from_raw_fd(fd.as_raw_fd()) };
     f.write_all(&guest)?;
 
     // Use execveat to run the binary
@@ -42,11 +44,12 @@ fn spawn_guest(res: TardisResource) -> Result<(), Box<dyn Error>> {
         .collect();
 
     let path = CStr::from_bytes_with_nul(b"\0")?;
-    let flags = 0x1000; // AT_EMPTY_PATH
+    let flags = AtFlags::AT_EMPTY_PATH;
 
-    unsafe {
-        sysc::execveat(fd, path, &argv, &envp, flags);
-    };
+    execveat(fd.as_raw_fd(), path, &argv, &envp, flags)?;
+
+    // Should not reach this point
+    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn Error>> {

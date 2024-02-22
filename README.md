@@ -19,7 +19,7 @@ $ cargo build --release
 To compress an executable, you can run
 
 ```
-$ cargo run -- pack $input_file $output_file
+$ cargo run -- -i $input_file -o $output_file
 ```
 
 ## Important usage notes

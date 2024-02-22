@@ -38,7 +38,7 @@ fn add_guest(f: &mut File, guest: &[u8]) -> Result<usize, Box<dyn Error>> {
 
 const LOADER: &[u8] = include_bytes!(concat!(
     env!("OUT_DIR"),
-    "/embeds/release/loader"
+    "/embeds/x86_64-unknown-linux-musl/release/loader"
 ));
 
 fn pack(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>> {

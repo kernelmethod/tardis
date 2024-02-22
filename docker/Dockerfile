@@ -1,4 +1,4 @@
-FROM rust:1.64-slim-bullseye
+FROM rust:1.76-slim-bullseye
 
 ARG HOMEDIR=/home/build
 ARG USER_UID=11000
@@ -10,7 +10,7 @@ RUN useradd build \
       --create-home
 
 RUN apt-get update && \
-    apt-get install -y build-essential llvm-dev libclang-dev clang && \
+    apt-get install -y build-essential llvm-dev libclang-dev clang musl-dev musl-tools && \
     apt-get clean
 
 RUN rustup component add rustfmt clippy

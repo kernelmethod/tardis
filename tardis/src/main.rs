@@ -18,7 +18,7 @@
 //! > binaries. The overhead incurred in adding the loader is typically much higher than the
 //! > savings from compression at the lower end.
 
-use clap::{app_from_crate, arg, AppSettings};
+use clap::Parser;
 use deku::DekuContainerWrite;
 use libtardis::serialization::{EndMarker, TardisResource};
 use std::error::Error;
@@ -38,7 +38,7 @@ fn add_guest(f: &mut File, guest: &[u8]) -> Result<usize, Box<dyn Error>> {
 
 const LOADER: &[u8] = include_bytes!(concat!(
     env!("OUT_DIR"),
-    "/embeds/x86_64-unknown-linux-gnu/release/loader"
+    "/embeds/release/loader"
 ));
 
 fn pack(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>> {
@@ -82,17 +82,23 @@ fn pack(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let app = app_from_crate!()
-        .about("Tardis executable packer for Linux")
-        .setting(AppSettings::ArgRequiredElseHelp)
-        .arg(arg!([INPUT_FILE]).required(true))
-        .arg(arg!([OUTPUT_FILE]).required(true));
+/// Simple executable packer for Linux using the memfd_create and openat
+/// syscalls.
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Name of the executable to compress.
+    #[arg(short, long)]
+    input_file: String,
 
-    let m = app.get_matches();
-    let input_file = m.value_of("INPUT_FILE").unwrap();
-    let output_file = m.value_of("OUTPUT_FILE").unwrap();
-    pack(input_file, output_file)?;
+    /// Name of the output file to write to.
+    #[arg(short, long)]
+    output_file: String,
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let args = Args::parse();
+    pack(&args.input_file, &args.output_file)?;
 
     Ok(())
 }

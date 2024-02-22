@@ -41,33 +41,38 @@ const LOADER: &[u8] = include_bytes!(concat!(
     "/embeds/x86_64-unknown-linux-musl/release/loader"
 ));
 
-fn pack(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>> {
+fn pack(input_files: &Vec<String>, output_file: &str) -> Result<(), Box<dyn Error>> {
     // Write the loader to the output file
     let mut guests_size = 0;
     let mut output = File::create(output_file)?;
 
     output.write_all(LOADER)?;
 
+    let if0 = input_files.first().unwrap();
+    let mut total_size = 0;
+
     // Set the same permissions on the output file that existed on the
     // input file
-    let input_perms = File::open(input_file)?.metadata()?.permissions();
+    let input_perms = File::open(if0)?.metadata()?.permissions();
     output.set_permissions(input_perms)?;
 
-    // Read the input executable into memory
-    //
-    // TODO (kernelmethod): read the file in chunks in case it's too
-    // large for us to fit into memory
-    let data = fs::read(input_file)?;
-    let orig_size = data.len();
+    for input_file in input_files.iter() {
+        // Read the input executable into memory
+        //
+        // TODO (kernelmethod): read the file in chunks in case it's too
+        // large for us to fit into memory
+        let data = fs::read(input_file)?;
+        total_size += data.len();
 
-    // Compress the executable and write it to the output file in a new
-    // data block
-    guests_size += add_guest(&mut output, &data)?;
+        // Compress the executable and write it to the output file in a new
+        // data block
+        guests_size += add_guest(&mut output, &data)?;
+    }
 
     // Write the EndMarker to the output file
     let marker = EndMarker {
         manifest_start: LOADER.len(),
-        n_resources: 1,
+        n_resources: input_files.len(),
     };
     let marker_bytes = marker.to_bytes().unwrap();
     output.write_all(&marker_bytes)?;
@@ -76,7 +81,7 @@ fn pack(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>> {
     println!(
         "Wrote {} ({:.2}% of input)",
         output_file,
-        output_size as f64 / orig_size as f64 * 100.
+        output_size as f64 / total_size as f64 * 100.
     );
 
     Ok(())
@@ -87,9 +92,10 @@ fn pack(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>> {
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Name of the executable to compress.
+    /// Name of the executable to compress. Multiple executables can be compressed together
+    /// and packed into the same file.
     #[arg(short, long)]
-    input_file: String,
+    input_file: Vec<String>,
 
     /// Name of the output file to write to.
     #[arg(short, long)]

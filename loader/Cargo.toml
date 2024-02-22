@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 deku.workspace = true
 libtardis = { path = "../libtardis" }
+nix.workspace = true
 panic-abort = "0.3.2"

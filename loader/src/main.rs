@@ -6,6 +6,7 @@
 use deku::DekuContainerRead;
 use libtardis::serialization::{EndMarker, TardisResource};
 use libtardis::syscall as sysc;
+use nix::unistd::{fork, ForkResult};
 use std::{
     env,
     error::Error,
@@ -25,7 +26,7 @@ fn spawn_guest(res: TardisResource) -> Result<(), Box<dyn Error>> {
         Ok(fd) => fd,
         Err(_) => panic!("aborted"),
     };
-    let flags = 0x1;
+    let flags = 0x1; // MFD_CLOEXEC
     let fd = unsafe { sysc::memfd_create(name, flags) };
 
     // Write the guest binary to the in-memory file
@@ -41,7 +42,7 @@ fn spawn_guest(res: TardisResource) -> Result<(), Box<dyn Error>> {
         .collect();
 
     let path = CStr::from_bytes_with_nul(b"\0")?;
-    let flags = 0x1000;
+    let flags = 0x1000; // AT_EMPTY_PATH
 
     unsafe {
         sysc::execveat(fd, path, &argv, &envp, flags);
@@ -53,12 +54,29 @@ fn main() -> Result<(), Box<dyn Error>> {
     let marker_start = host.len() - EndMarker::nbytes();
 
     let (_, marker) = EndMarker::from_bytes((&host[marker_start..], 0))?;
-    let offset = marker.manifest_start;
+    let mut offset = marker.manifest_start;
 
     // Read the next resource and fork a new process off
     // of it
-    let (_, resource) = TardisResource::from_bytes((&host[offset..], 0))?;
-    spawn_guest(resource)?;
+    for _ in 0..marker.n_resources {
+        let (_, resource) = TardisResource::from_bytes((&host[offset..], 0))?;
+        offset += resource.len();
+
+        // Only fork off processes if there is more than one executable that needs
+        // to be launched.
+        if marker.n_resources == 1 {
+            spawn_guest(resource)?;
+
+            // Should not reach this point
+            return Ok(());
+        }
+
+        match unsafe { fork() } {
+            Ok(ForkResult::Child) => spawn_guest(resource)?,
+            Ok(_) => continue,
+            Err(e) => return Err(Box::new(e)),
+        }
+    }
 
     Ok(())
 }
